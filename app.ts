@@ -26,15 +26,20 @@ enum Caller {
 }
 
 type OnlineUser = { name: string, session: string };
-
 type Who = string|Caller; 
 
+
+/**
+ * Run the application
+ * 
+ * @export
+ */
 export function run(): void {
-  const joinInp:  HTMLInputElement = document.getElementById('join')      as HTMLInputElement;
-  const msgInp:   HTMLInputElement = document.getElementById('inp')       as HTMLInputElement;
-  const userList: HTMLDivElement   = document.querySelector('#online ul') as HTMLDivElement;
-  const dataList: HTMLDivElement   = document.getElementById('console')   as HTMLDivElement;
-  const conStatus: HTMLSpanElement = document.querySelector('.constatus') as HTMLSpanElement;
+  const joinInp:   HTMLInputElement = document.getElementById('join')      as HTMLInputElement;
+  const msgInp:    HTMLInputElement = document.getElementById('inp')       as HTMLInputElement;
+  const userList:  HTMLDivElement   = document.querySelector('#online ul') as HTMLDivElement;
+  const dataList:  HTMLDivElement   = document.getElementById('console')   as HTMLDivElement;
+  const conStatus: HTMLSpanElement  = document.querySelector('.constatus') as HTMLSpanElement;
 
   joinInp.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.keyCode === 13 && joinInp.value.length) {
@@ -47,16 +52,17 @@ export function run(): void {
   const appendMessage = (what: string, who?: Who): void => {
     let cls = '';
     if (typeof who !== 'string') {
-      cls = who == Caller.ME ? ' me' : ' server';
-      who = who == Caller.ME ? 'Me' : 'Server';
+      cls = who === Caller.ME ? ' me' : ' server';
+      who = who === Caller.ME ? 'Me' : 'Server';
     }
 
-    let tmpl = `<div><span class="who${cls}">${who}</span><span class="msg">${what}</span></div>`;
+    let tmpl = `<div><span class="who${cls}">${who}</span>
+                <span class="msg">${what}</span></div>`;
     dataList.innerHTML += tmpl;
   }
 
   const join = (who: string) => {
-    let cli: WS.WSNamedClient = WS.createNamedClient(who, serverUrl, [ 'p1' ]);
+    let cli: WS.NamedClient = WS.createNamedClient(who, serverUrl, [ 'p1' ]);
 
     const updateUserList = (users: OnlineUser[]): void => {
       let out: string = '';
@@ -105,7 +111,7 @@ export function run(): void {
       conStatus.classList.remove('online');
     }
 
-    cli.onmessage = (res: WS.WSResponse, sock: WebSocket, ev: Event): any => {
+    cli.onmessage = (res: WS.Response, sock: WebSocket, ev: Event): any => {
       console.log('res: ', res);
 
       switch (res.type) {

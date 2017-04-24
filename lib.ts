@@ -17,16 +17,25 @@ export namespace GUID {
   }
 }
 
+/**
+ * Alias for `console.log` if `[?&]debug=1` is in the query string.
+ */
+export const wdebug = document.location.search.indexOf('debug=1') > -1 ?
+                      console.log : () => {};
+
 export module WS {
   const _session: string = GUID.version4();
 
-  export type WSClient = Client;
-  export type WSNamedClient = NamedClient;
-  export type WSMessage = {
+  /**
+   * 
+   */
+  export type Client = _Client;
+  export type NamedClient = _NamedClient;
+  export type Message = {
     session : string,
     data? : any
   };
-  export type WSResponse = {
+  export type Response = {
     ok: boolean,
     data?: any,
     type: number
@@ -41,8 +50,8 @@ export module WS {
    * @param {(string|string[])} [protos] 
    * @returns {Client} 
    */
-  export function createClient(url: string, protos?: string|string[]): Client {
-    return new Client(url, protos);
+  export function createClient(url: string, protos?: string|string[]): _Client {
+    return new _Client(url, protos);
   }
 
 
@@ -56,18 +65,18 @@ export module WS {
    * @returns {NamedClient} 
    */
   export function createNamedClient(name: string, url: string, 
-                                    protos?: string|string[]): NamedClient
+                                    protos?: string|string[]): _NamedClient
   {
-    return new NamedClient(url, name, protos);
+    return new _NamedClient(url, name, protos);
   }
 
 
   /**
    * Basic client
    * 
-   * @class Client
+   * @class _Client
    */
-  class Client {
+  class _Client {
     /**
      * The WebSocket connection object
      * @private
@@ -87,7 +96,7 @@ export module WS {
     public onopen:    (ws: WebSocket, ev: Event) => any;
     public onclose:   (ws: WebSocket, ev: Event) => any;
     public onerror:   (ws: WebSocket, ev: Event) => any;
-    public onmessage: (res: WSResponse, ws?: WebSocket, ev?: Event) => any;
+    public onmessage: (res: Response, ws?: WebSocket, ev?: Event) => any;
 
     private readResponse(blob: Blob): void
     {
@@ -96,12 +105,12 @@ export module WS {
       blobReader.onloadend = function(this: MSBaseReader, ev: ProgressEvent) {
         let _res: any = JSON.parse(blobReader.result);
 
-        const res: WSResponse = {
+        const res: Response = {
           ok: _res.ok,
           data: _res.data,
           type: _res.type
         };
-        
+
         _.onmessage(res, _.sock, ev);
       };
 
@@ -156,7 +165,7 @@ export module WS {
       this.sock = new WebSocket(this._url, this._protos);
       
       this.sock.onopen = function onopen(this: WebSocket, ev: Event): any {
-        console.log('onopen: ', this, ev);
+        wdebug('onopen: ', this, ev);
 
         if (_.onopen) {
           _._isConnected = true;
@@ -165,7 +174,8 @@ export module WS {
       };
       
       this.sock.onclose = function onclose(this: WebSocket, ev: Event): any {
-        console.log('onclose: ', this, ev);
+        wdebug('onclose: ', this, ev);
+
         _._isConnected = false;
         if (_.onclose) {
           _.onclose(this, ev);
@@ -173,14 +183,14 @@ export module WS {
       };
       
       this.sock.onerror = function onerror(this: WebSocket, ev: Event): any {
-        console.log('onerror: ', this, ev);
+        wdebug('onerror: ', this, ev);
         if (_.onerror) {
           _.onerror(this, ev);
         }
       };
 
       this.sock.onmessage =  function onmessage(this: WebSocket, ev: MessageEvent): any {
-        console.log('onmessage: ', this, ev);
+        wdebug('onmessage: ', this, ev);
         
         if (_.onmessage) {
           _.readResponse(ev.data);
@@ -190,14 +200,13 @@ export module WS {
   }
 
 
-
   /**
    * Named client
    * 
-   * @class NamedClient
-   * @extends {Client}
+   * @class _NamedClient
+   * @extends {_Client}
    */
-  class NamedClient extends Client {
+  class _NamedClient extends _Client {
 
     constructor(protected _url: string, protected _name: string,
                 protected _protos?: string|string[]) 
