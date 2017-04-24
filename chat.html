@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
+  <!-- <script src="libs/require.js"></script> -->
+  <script>
+    requirejs.config({
+      enforceDefine: true,
+      paths: {
+        app: [ 'app' ]
+      }
+    });
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="init">
+  <header>
+    <div class="site-wrapper site-padding">
+      <h1>Simple Chat</h1>
+      <div class="constatus offline">Offline</div>
+    </div>
+  </header>
+
+  <div class="site-wrapper site-padding">
+
+    <div class="view join">
+      <div class="">
+        <input type="text" id="join" placeholder="Join chat as..." autofocus="">
+      </div>
+    </div>
+
+    <div class="view connected">
+      <div class="msgwrapper">
+        <div id="frm">
+          <input type="text" autocomplete="false" id="inp" disabled=""
+                 placeholder="Write something...">
+        </div>
+        <div id="console"></div>
+      </div>
+
+      <div id="online" class="online">
+        <h2>Who's Online</h2>
+        <ul><li>No one</li></ul>
+      </div>
+    </div>
+
+    <div class="view connection-lost">
+      <div class="">Server shut down the connection...</div>
+    </div>
+  </div>
+
+  <script>
+    require(['app'], function(app) {
+      app.run();
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,208 @@
+/*
+  Author: Pontus Östlund <https://github.com/poppa>
+
+  Permission to copy, modify, and distribute this source for any legal
+  purpose granted as long as my name is still attached to it. More
+  specifically, the GPL, LGPL and MPL licenses apply to this software.
+*/
+
+$text-fg: #aaa;
+$body-bg: #212F3C;
+$header-bg: #17202A;
+$header-fg: #3498DB;
+$site-padding: 1.5rem;
+$online-fg: #229954;
+$me-color: #F4D03F;
+$server-color: #AEB6BF;
+$other-color: #F1948A;
+
+*,
+*:before,
+*:after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: arial, sans-serif;
+  font-size: 100%;
+  background: $body-bg;
+  color: $text-fg;
+
+  .view {
+    display: none;
+  }
+
+  &.init {
+    .view.join {
+      display: block;
+    }
+  }
+
+  &.connected {
+    .view.connected {
+      display: flex;
+
+      .msgwrapper {
+        width: 70%;
+
+        input {
+          width: 100%;
+          margin-bottom: $site-padding;
+        }
+      }
+
+      .online {
+        width: 30%;
+        margin-left: $site-padding;
+        background: darken($body-bg, 2%);
+
+        h2 {
+          margin: 0;
+          background: $header-bg;
+          padding: $site-padding/1.5 $site-padding;
+          font-size: 16px;
+          line-height: 1;
+          vertical-align: middle;
+        }
+
+        ul {
+          list-style: none;
+          margin: 0;
+          padding: $site-padding/1.5 $site-padding;
+          line-height: 1.4;
+        }
+      }
+    }
+  }
+
+  &.connection-lost {
+    .view.connection-lost {
+      display: block;
+    }
+  }
+}
+
+@mixin clear-float() {
+  &:after {
+    display: table;
+    content: ' ';
+    clear: both;
+  }
+}
+
+header {
+  background: $header-bg;
+  margin-bottom: $site-padding;
+  position: relative;
+
+  .site-padding {
+    padding: $site-padding/2 $site-padding;
+    @include clear-float();
+  }
+
+  h1 {
+    float: left;
+  }
+
+  .constatus {
+    float: right;
+    margin-top: $site-padding/2.5;
+
+    &.offline {
+      color: lighten($header-bg, 15%);
+    }
+
+    &.online {
+      color: $online-fg;
+    }
+  }
+}
+
+h1 {
+  margin: 0;
+  color: $header-fg;
+}
+
+label {
+  display: block;
+}
+
+input[type='text'] {
+  padding: $site-padding/2;
+  font-size: 16px;
+  background: lighten($body-bg, 15%);
+  border: 1px solid lighten($body-bg, 25%);
+  color: $text-fg;
+
+  &:focus {
+    outline: none;
+    border-color: lighten($body-bg, 50%);
+  }
+}
+
+[placeholder] {
+  &:-moz-placeholder {
+    color: lighten($body-bg, 45%);
+    opacity: 1;
+  }
+
+  &::-moz-placeholder {
+    color: lighten($body-bg, 45%);
+    opacity: 1;
+  }
+
+  &::-webkit-input-placeholder {
+    color: lighten($body-bg, 45%);
+    opacity: 1;
+  }
+
+  &:-ms-input-placeholder {
+    color: lighten($body-bg, 45%);
+    opacity: 1;
+  }
+}
+
+.site-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.site-padding {
+  padding: 0 $site-padding;
+}
+
+#console {
+  div {
+    margin: 0 0 6px;
+  }
+
+  span {
+    display: inline-block;
+    vertical-align: top;
+  }
+
+  .who {
+    width: 15%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: $other-color;
+    padding-right: $site-padding/2;
+
+    &.me {
+      color: $me-color;
+    }
+
+    &.server {
+      color: $server-color;
+      opacity: .5;
+
+      + span {
+        opacity: .5;
+      }
+    }
+  }
+}
