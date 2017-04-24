@@ -157,6 +157,7 @@ private void handle_ws(array(string) proto, WSRequestID id)
           break;
 
         default:
+          msg->text = string_to_utf8(msg->text);
           get_other_subscribers(c)
             ->broadcast(MSG_TYPE_DEFAULT,
                         ([ "who" : s->name, "what" :  msg->text ]));
@@ -205,7 +206,7 @@ class Subscriber
 
   public void update(string name, string sess)
   {
-    _name = name;
+    _name = string_to_utf8(name);
     _session = sess;
   }
 
