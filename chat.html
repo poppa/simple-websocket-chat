@@ -8,11 +8,11 @@
     requirejs.config({
       enforceDefine: true,
       paths: {
-        app: [ 'app' ]
+        app: [ 'build/app' ]
       }
     });
   </script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="build/style.css">
 </head>
 <body class="init">
   <header>
@@ -51,7 +51,7 @@
   </div>
 
   <script>
-    require(['app'], function(app) {
+    require(['build/app'], function(app) {
       app.run();
     });
   </script>
