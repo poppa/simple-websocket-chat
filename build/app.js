@@ -60,8 +60,14 @@ define(["require", "exports", "./lib"], function (require, exports, lib_1) {
             cls = who === Caller.ME ? ' me' : ' server';
             who = who === Caller.ME ? 'Me' : 'Server';
         }
-        var tmpl = "<div><span class=\"who" + cls + "\">" + who + "</span>\n              <span class=\"msg\">" + what + "</span></div>";
-        dataList.innerHTML += tmpl;
+        var tmpl = "<span class=\"who" + cls + "\">" + who + "</span>\n              <span class=\"msg\">" + what + "</span>";
+        var dummy = document.createElement('div');
+        dummy.innerHTML = tmpl;
+        if (cls.length) {
+            dummy.classList.add(cls.trim());
+        }
+        dummy.classList.add('append');
+        dataList.insertBefore(dummy, dataList.firstElementChild);
     };
     var updateUserList = function (users) {
         var out = '';

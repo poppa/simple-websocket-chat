@@ -6,6 +6,7 @@
   specifically, the GPL, LGPL and MPL licenses apply to this software.
 */
 
+
 $text-fg: #aaa;
 $body-bg: #212F3C;
 $header-bg: #17202A;
@@ -45,11 +46,17 @@ body {
       display: flex;
 
       .msgwrapper {
+        position: relative;
         width: 70%;
+
+        #frm {
+          margin-bottom: 4px;
+          box-shadow: 0px 1px 4px rgba(0, 0, 0, .8);
+        }
 
         input {
           width: 100%;
-          margin-bottom: $site-padding;
+          // margin-bottom: $site-padding;
         }
       }
 
@@ -174,9 +181,54 @@ input[type='text'] {
   padding: 0 $site-padding;
 }
 
+@keyframes pulsate {
+  0%, 50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  25% {
+    opacity: .5;
+    transform: scale(1.05);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  75% {
+    opacity: .5;
+    transform: scale(.95);
+  }
+}
+
 #console {
+  // position: absolute;
+  // top: 46px;
+  // bottom: 0;
+  // width: 100%;
+
   div {
-    margin: 0 0 6px;
+    margin: 0 0 -1px;
+    padding: $site-padding/2;
+    border: 1px solid darken($body-bg, 5%);
+    background: lighten($body-bg, 5%);
+
+    &.me {
+      background: lighten($body-bg, 2%);
+    }
+
+    &.server {
+      background: darken($body-bg, 2%);
+    }
+
+    &.append {
+      animation-name: pulsate;
+      animation-duration: .3s;
+      animation-iteration-count: 1;
+      animation-timing-function: ease-in;
+    }
   }
 
   span {

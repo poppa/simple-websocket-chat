@@ -73,14 +73,24 @@ let cli: MyClient;
 
 const appendMessage = (what: string, who?: Who): void => {
   let cls = '';
+
   if (typeof who !== 'string') {
     cls = who === Caller.ME ? ' me' : ' server';
     who = who === Caller.ME ? 'Me' : 'Server';
   }
 
-  let tmpl = `<div><span class="who${cls}">${who}</span>
-              <span class="msg">${what}</span></div>`;
-  dataList.innerHTML += tmpl;
+  let tmpl = `<span class="who${cls}">${who}</span>
+              <span class="msg">${what}</span>`;
+
+  const dummy: HTMLDivElement = document.createElement('div') as HTMLDivElement;
+  dummy.innerHTML = tmpl;
+  
+  if (cls.length) {
+    dummy.classList.add(cls.trim());
+  }
+
+  dummy.classList.add('append');
+  dataList.insertBefore(dummy,  dataList.firstElementChild);
 }
 
 
