@@ -26,11 +26,6 @@ export const wdebug = document.location.search.indexOf('debug=1') > -1 ?
 export module WS {
   const _session: string = GUID.version4();
 
-  /**
-   * 
-   */
-  export type Client = _Client;
-  export type NamedClient = _NamedClient;
   export type Message = {
     session : string,
     data? : any
@@ -41,6 +36,10 @@ export module WS {
     type: number
   };
 
+  export type SocketAction    = 'open'|'error'|'close'|'message';
+  export type ActionCallback  = (ws?: WebSocket, ev?: Event) => any;
+  export type MessageCallback = (res: Response, ws?: WebSocket, ev?: MessageEvent) => any;
+
 
   /**
    * Factory method for creating a client
@@ -50,8 +49,8 @@ export module WS {
    * @param {(string|string[])} [protos] 
    * @returns {Client} 
    */
-  export function createClient(url: string, protos?: string|string[]): _Client {
-    return new _Client(url, protos);
+  export function createClient(url: string, protos?: string|string[]): Client {
+    return new Client(url, protos);
   }
 
 
@@ -65,18 +64,18 @@ export module WS {
    * @returns {NamedClient} 
    */
   export function createNamedClient(name: string, url: string, 
-                                    protos?: string|string[]): _NamedClient
+                                    protos?: string|string[]): NamedClient
   {
-    return new _NamedClient(url, name, protos);
+    return new NamedClient(url, name, protos);
   }
 
 
   /**
    * Basic client
    * 
-   * @class _Client
+   * @class Client
    */
-  class _Client {
+  export class Client {
     /**
      * The WebSocket connection object
      * @private
@@ -93,12 +92,12 @@ export module WS {
      */
     private _isConnected: boolean = false;
 
-    public onopen:    (ws: WebSocket, ev: Event) => any;
-    public onclose:   (ws: WebSocket, ev: Event) => any;
-    public onerror:   (ws: WebSocket, ev: Event) => any;
-    public onmessage: (res: Response, ws?: WebSocket, ev?: Event) => any;
+    protected onopen:    ActionCallback;
+    protected onclose:   ActionCallback;
+    protected onerror:   ActionCallback;
+    protected onmessage: MessageCallback;
 
-    private readResponse(blob: Blob): void
+    private readResponse(blob: Blob, mev: MessageEvent): void
     {
       const _ = this;
       const blobReader: FileReader = new FileReader();
@@ -111,7 +110,7 @@ export module WS {
           type: _res.type
         };
 
-        _.onmessage(res, _.sock, ev);
+        _.onmessage(res, _.sock, mev);
       };
 
       blobReader.readAsText(blob);
@@ -149,10 +148,53 @@ export module WS {
       return this._isConnected;
     }
 
+
+    /**
+     * Send a message to the server. `msg` will be JSON stringified.
+     * 
+     * @param {*} msg 
+     * 
+     * @memberOf Client
+     */
     public send(msg: any): void {
       if (this._isConnected) {
         this.sock.send(JSON.stringify(msg));
       }
+    }
+
+
+    /**
+     * Register an action callback. `cb` will be called when an `on[action]` 
+     * event is emitted.
+     * 
+     * @param {SocketAction} action 
+     * @param {(ActionCallback|MessageCallback)} cb 
+     * @returns {Client} 
+     * 
+     * @memberOf Client
+     */
+    public onaction(action: SocketAction, 
+                    cb:     ActionCallback|MessageCallback): Client 
+    {
+      switch (action) {
+        case 'open':
+          this.onopen = cb as ActionCallback;
+          break;
+        
+        case 'close':
+          this.onclose = cb as ActionCallback;
+          break;
+
+        case 'error':
+          this.onclose = cb as ActionCallback;
+          break;
+
+        case 'message':
+          this.onmessage = cb as MessageCallback;
+          break;
+      }
+
+      return this;
     }
 
     /**
@@ -166,9 +208,10 @@ export module WS {
       
       this.sock.onopen = function onopen(this: WebSocket, ev: Event): any {
         wdebug('onopen: ', this, ev);
+        
+        _._isConnected = true;
 
         if (_.onopen) {
-          _._isConnected = true;
           _.onopen(this, ev);
         }
       };
@@ -177,6 +220,7 @@ export module WS {
         wdebug('onclose: ', this, ev);
 
         _._isConnected = false;
+
         if (_.onclose) {
           _.onclose(this, ev);
         }
@@ -184,6 +228,7 @@ export module WS {
       
       this.sock.onerror = function onerror(this: WebSocket, ev: Event): any {
         wdebug('onerror: ', this, ev);
+
         if (_.onerror) {
           _.onerror(this, ev);
         }
@@ -193,27 +238,44 @@ export module WS {
         wdebug('onmessage: ', this, ev);
         
         if (_.onmessage) {
-          _.readResponse(ev.data);
+          _.readResponse(ev.data, ev);
         }
       };
     }
   }
 
-
+  
   /**
    * Named client
    * 
-   * @class _NamedClient
-   * @extends {_Client}
+   * @export
+   * @class NamedClient
+   * @extends {Client}
    */
-  class _NamedClient extends _Client {
+  export class NamedClient extends Client {
 
+    /**
+     * Creates an instance of NamedClient.
+     * @param {string} _url 
+     * @param {string} _name 
+     * @param {(string|string[])} [_protos] 
+     * 
+     * @memberOf NamedClient
+     */
     constructor(protected _url: string, protected _name: string,
                 protected _protos?: string|string[]) 
     {
       super(_url, _protos);
     }
 
+
+    /**
+     * Get the name
+     * 
+     * @readonly
+     * @type {string}
+     * @memberOf NamedClient
+     */
     get name(): string {
       return this._name;
     }

@@ -21,20 +21,20 @@ define(["require", "exports"], function (require, exports) {
     (function (WS) {
         var _session = GUID.version4();
         function createClient(url, protos) {
-            return new _Client(url, protos);
+            return new Client(url, protos);
         }
         WS.createClient = createClient;
         function createNamedClient(name, url, protos) {
-            return new _NamedClient(url, name, protos);
+            return new NamedClient(url, name, protos);
         }
         WS.createNamedClient = createNamedClient;
-        var _Client = (function () {
-            function _Client(_url, _protos) {
+        var Client = (function () {
+            function Client(_url, _protos) {
                 this._url = _url;
                 this._protos = _protos;
                 this._isConnected = false;
             }
-            _Client.prototype.readResponse = function (blob) {
+            Client.prototype.readResponse = function (blob, mev) {
                 var _ = this;
                 var blobReader = new FileReader();
                 blobReader.onloadend = function (ev) {
@@ -44,36 +44,53 @@ define(["require", "exports"], function (require, exports) {
                         data: _res.data,
                         type: _res.type
                     };
-                    _.onmessage(res, _.sock, ev);
+                    _.onmessage(res, _.sock, mev);
                 };
                 blobReader.readAsText(blob);
             };
-            Object.defineProperty(_Client.prototype, "session", {
+            Object.defineProperty(Client.prototype, "session", {
                 get: function () {
                     return _session;
                 },
                 enumerable: true,
                 configurable: true
             });
-            Object.defineProperty(_Client.prototype, "isConnected", {
+            Object.defineProperty(Client.prototype, "isConnected", {
                 get: function () {
                     return this._isConnected;
                 },
                 enumerable: true,
                 configurable: true
             });
-            _Client.prototype.send = function (msg) {
+            Client.prototype.send = function (msg) {
                 if (this._isConnected) {
                     this.sock.send(JSON.stringify(msg));
                 }
             };
-            _Client.prototype.start = function () {
+            Client.prototype.onaction = function (action, cb) {
+                switch (action) {
+                    case 'open':
+                        this.onopen = cb;
+                        break;
+                    case 'close':
+                        this.onclose = cb;
+                        break;
+                    case 'error':
+                        this.onclose = cb;
+                        break;
+                    case 'message':
+                        this.onmessage = cb;
+                        break;
+                }
+                return this;
+            };
+            Client.prototype.start = function () {
                 var _ = this;
                 this.sock = new WebSocket(this._url, this._protos);
                 this.sock.onopen = function onopen(ev) {
                     exports.wdebug('onopen: ', this, ev);
+                    _._isConnected = true;
                     if (_.onopen) {
-                        _._isConnected = true;
                         _.onopen(this, ev);
                     }
                 };
@@ -93,30 +110,32 @@ define(["require", "exports"], function (require, exports) {
                 this.sock.onmessage = function onmessage(ev) {
                     exports.wdebug('onmessage: ', this, ev);
                     if (_.onmessage) {
-                        _.readResponse(ev.data);
+                        _.readResponse(ev.data, ev);
                     }
                 };
             };
-            return _Client;
+            return Client;
         }());
-        var _NamedClient = (function (_super) {
-            __extends(_NamedClient, _super);
-            function _NamedClient(_url, _name, _protos) {
+        WS.Client = Client;
+        var NamedClient = (function (_super) {
+            __extends(NamedClient, _super);
+            function NamedClient(_url, _name, _protos) {
                 var _this = _super.call(this, _url, _protos) || this;
                 _this._url = _url;
                 _this._name = _name;
                 _this._protos = _protos;
                 return _this;
             }
-            Object.defineProperty(_NamedClient.prototype, "name", {
+            Object.defineProperty(NamedClient.prototype, "name", {
                 get: function () {
                     return this._name;
                 },
                 enumerable: true,
                 configurable: true
             });
-            return _NamedClient;
-        }(_Client));
+            return NamedClient;
+        }(Client));
+        WS.NamedClient = NamedClient;
     })(WS = exports.WS || (exports.WS = {}));
 });
 //# sourceMappingURL=lib.js.map

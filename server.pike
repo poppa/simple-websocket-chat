@@ -9,10 +9,12 @@
 
 #require constant(Protocols.WebSocket)
 
-import Protocols.WebSocket;
+// Change to what ever float your boat
+constant MY_PORT = 4070;
 
-typedef Protocols.HTTP.Server.Request RequestID;
-typedef Protocols.WebSocket.Request WSRequestID;
+import .MyWebSocket;
+
+typedef Request WSRequestID;
 
 #ifdef WSTEST_DEBUG
 # define TRACE(X...)werror("%s:%d: %s",basename(__FILE__),__LINE__,sprintf(X))
@@ -23,8 +25,6 @@ typedef Protocols.WebSocket.Request WSRequestID;
 #define LOCK_CONS()   Thread.MutexKey lock = mux->lock()
 #define UNLOCK_CONS() lock = 0
 
-constant MY_PORT = 4070;
-
 Thread.Mutex mux = Thread.Mutex();
 array(Subscriber) subscribers = ({});
 
@@ -32,20 +32,12 @@ int main(int argc, array(string) argv)
 {
   mixed err = catch {
     write("Starting server on port %d\n", MY_PORT);
-    Protocols.WebSocket.Port(handle_http, handle_ws, MY_PORT);
+    Port(UNDEFINED, handle_ws, MY_PORT);
     return -1;
   };
 
   werror("Error starting server on port %d: %s\n", MY_PORT,
          describe_error(err));
-}
-
-enum MsgType {
-  MSG_TYPE_DEFAULT,
-  MSG_TYPE_USER_LIST,
-  MSG_TYPE_CONNECT,
-  MSG_TYPE_JOIN,
-  MSG_TYPE_LEFT
 }
 
 private string encode_message(mixed data, void|MsgType type)
@@ -124,74 +116,55 @@ void send_user_list()
 
 private void handle_ws(array(string) proto, WSRequestID id)
 {
-  TRACE("Got connection request: %O, %O\n", proto, id);
+  TRACE("Got connection request: %O, %O\n", proto*", ", id);
+  Connection con = id->websocket_accept(sizeof(proto) && proto[0]);
 
-  Connection con;
-  con = id->websocket_accept(sizeof(proto) && proto[0]);
-
-  con->onopen = lambda (mixed a, void|mixed b) {
-    TRACE("con->onopen(%O, %O)\n", a, b);
-  };
-
-  con->onmessage = lambda (Frame frame, Connection c) {
-    mapping msg;
-    mixed err = catch {
-      msg = Standards.JSON.decode(frame->text);
-    };
-
-    if (msg) {
-      TRACE("Message: %O\n", msg);
-      Subscriber s = get_subscriber(c);
-
-      switch (msg->type)
-      {
-        case MSG_TYPE_JOIN:
-          s->update(msg->name, msg->session);
-          send_user_list();
-          get_other_subscribers(c)
-            ->broadcast(MSG_TYPE_JOIN, ([ "who" : s->name ]));
-          break;
-
-        case MSG_TYPE_USER_LIST:
-          send_user_list();
-          break;
-
-        default:
-          msg->text = string_to_utf8(msg->text);
-          get_other_subscribers(c)
-            ->broadcast(MSG_TYPE_DEFAULT,
-                        ([ "who" : s->name, "what" :  msg->text ]));
-          break;
-      }
-    }
-    else {
-      TRACE("Error: %O\n", describe_error(err));
-    }
-  };
-
-  con->onclose = lambda (int status, Connection c) {
-    TRACE("con->onclose(%O, %O)\n", status, c);
-    Subscriber s = remove_subscriber(c);
-    TRACE("Remove subscriber: %O\n", s);
-    c->onopen = c->onmessage = c->onclose = 0;
-    subscribers->broadcast(MSG_TYPE_LEFT, "%s left!", s && s->name||"Unknown");
-    send_user_list();
-  };
+  con
+    // Join chat
+    ->on(MSG_TYPE_JOIN,
+         lambda (mixed m, Frame f, Connection c) {
+           Subscriber s = get_subscriber(c);
+           s->update(m->name, m->session);
+           send_user_list();
+           get_other_subscribers(c)
+             ->broadcast(MSG_TYPE_JOIN, ([ "who" : s->name ]));
+         })
+    // List users online
+    ->on(MSG_TYPE_USER_LIST,
+         lambda (mixed m, Frame f, Connection c) {
+           send_user_list();
+         })
+    // Handle message
+    ->on(MSG_TYPE_MESSAGE,
+         lambda (mixed m, Frame f, Connection c) {
+           Subscriber s = get_subscriber(c);
+           m->text = string_to_utf8(m->text);
+           get_other_subscribers(c)
+             ->broadcast(MSG_TYPE_MESSAGE,
+                         ([ "who" : s->name, "what" :  m->text ]));
+         })
+    // Catch anything
+    ->on(MSG_TYPE_ANY,
+         lambda (mixed m, Frame f, Connection c) {
+           TRACE("Unknown message type!\n");
+         })
+    // Connection closed
+    ->on_action("close",
+         lambda (int status, Connection c) {
+           TRACE("con->onclose(%O)\n", status);
+           Subscriber s = remove_subscriber(c);
+           TRACE("Remove subscriber: %O\n", s);
+           // c->onopen = c->onmessage = c->onclose = 0;
+           subscribers->broadcast(MSG_TYPE_LEFT, "%s left!",
+                                  s && s->name||"Unknown");
+           send_user_list();
+           destruct(s);
+         });
 
   Subscriber s = add_subscriber(con);
 
   s->broadcast(MSG_TYPE_CONNECT, "I'm alive");
 }
-
-private void handle_http(RequestID id)
-{
-  id->response_and_finish(([
-    "data"  : "Not implemented",
-    "type"  : "text/plain",
-    "error" : 501
-  ]));
-}
-
 
 class Subscriber
 {
@@ -210,9 +183,20 @@ class Subscriber
     _session = sess;
   }
 
-  public Connection `connection() { return _con; }
-  public string `name() { return _name; }
-  public string `session() { return _session; }
+  public Connection `connection()
+  {
+    return _con;
+  }
+
+  public string `name()
+  {
+    return _name;
+  }
+
+  public string `session()
+  {
+    return _session;
+  }
 
   public void broadcast(MsgType t, strict_sprintf_format text,
                         sprintf_args ... args)
@@ -230,4 +214,11 @@ class Subscriber
     return sprintf("%O(%O, %O)", object_program(this),
                    _name||"(Unnamed)", _session||"(no session");
   }
+
+#ifdef WSTEST_DEBUG
+  protected void destroy()
+  {
+    TRACE("Subscriber %O destructed\n", _name);
+  }
+#endif
 }
